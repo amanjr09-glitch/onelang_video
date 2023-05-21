@@ -84,30 +84,30 @@ export default function JoinMeeting() {
     };
     getMeetingData();
   }, [params.id, user, userLoaded, createToast, navigate]);
-  // const myMeeting = async (element: any) => {
-  //   const kitToken = ZegoUIKitPrebuilt.generateKitTokenForTest(
-  //     parseInt("a3377f6386b93fe34892bf9de0e08919ee3c19605cb363952685a1a400f4916f"),
-  //     "2d02008374016c50a29e1bde2aa2f6ff "as string,
-  //     params.id as string,
-  //     user?.uid ? user.uid : generateMeetingID(),
-  //     user?.displayName ? user.displayName : generateMeetingID()
-  //   );
-  //   const zp = ZegoUIKitPrebuilt.create(kitToken);
-
-  //   zp?.joinRoom({
-  //     container: element,
-  //     maxUsers: 50,
-  //     sharedLinks: [
-  //       {
-  //         name: "Personal link",
-  //         url: window.location.origin,
-  //       },
-  //     ],
-  //     scenario: {
-  //       mode: ZegoUIKitPrebuilt.VideoConference,
-  //     },
-  //   });
-  // };
+  const myMeeting = async (element: any) => {
+    const kitToken = ZegoUIKitPrebuilt.generateKitTokenForTest(
+      parseInt("a3377f6386b93fe34892bf9de0e08919ee3c19605cb363952685a1a400f4916f"),
+      "2d02008374016c50a29e1bde2aa2f6ff "as string,
+      params.id as string,
+      user?.uid ? user.uid : generateMeetingID(),
+      user?.displayName ? user.displayName : generateMeetingID()
+    );
+    const zp = ZegoUIKitPrebuilt.create(kitToken);
+   zp?.joinRoom(
+    //   {
+    //   container: element,
+    //   maxUsers: 50,
+    //   sharedLinks: [
+    //     {
+    //       name: "Personal link",
+    //       url: window.location.origin,
+    //     },
+    //   ],
+    //   scenario: {
+    //     mode: ZegoUIKitPrebuilt.VideoConference,
+    //   },
+    );
+  };
 
   return isAllowed ? (
     <div
@@ -119,7 +119,7 @@ export default function JoinMeeting() {
     >
       <div
         className="myCallContainer"
-        // ref={myMeeting}
+        ref={myMeeting}
         style={{ width: "100%", height: "100vh" }}
       ></div>
     </div>

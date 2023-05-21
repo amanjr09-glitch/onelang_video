@@ -18,6 +18,7 @@ import Meeting from "./pages/Meeting";
 import MyMeetings from "./pages/MyMeetings";
 import OneOnOneMeeting from "./pages/OneOnOneMeeting";
 import VideoConference from "./pages/VideoConference";
+import Glass from "./pages/Glass/Glass";
 
 export default function App() {
   const dispatch = useDispatch();
@@ -57,7 +58,8 @@ export default function App() {
     },
   };
 
-  return (
+  return (<>
+  <Glass/>
     <ThemeSelector>
       <EuiProvider colorMode={theme}>
         <EuiThemeProvider modify={overrides}>
@@ -79,6 +81,7 @@ export default function App() {
           />
         </EuiThemeProvider>
       </EuiProvider>
-    </ThemeSelector>
+    </ThemeSelector></>
+    
   );
 }
