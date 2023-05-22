@@ -65,17 +65,6 @@ export default function Header() {
   const section = [
     {
       items: [
-        <Link to="/">
-          <EuiText>
-            <h2 style={{ padding: "0 1vw" }}>
-              <EuiTextColor color="#0b5cff">Zoom</EuiTextColor>
-            </h2>
-          </EuiText>
-        </Link>,
-      ],
-    },
-    {
-      items: [
         <>
           {userName ? (
             <EuiText>
