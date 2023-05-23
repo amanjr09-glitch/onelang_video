@@ -21,15 +21,17 @@ import useAuth from "../hooks/useAuth";
 import useFetchUsers from "../hooks/useFetchUsers";
 import useToast from "../hooks/useToast";
 import { meetingsRef } from "../utils/firebaseConfig";
-import { generateMeetingID } from "../utils/generateMeetingId";
 import { FieldErrorType, UserType } from "../utils/types";
+import { setMeeting } from "../app/slices/MeetingSlice";
+import { useDispatch } from "react-redux";
 
 export default function VideoConference() {
   useAuth();
   const [users] = useFetchUsers();
   const [createToast] = useToast();
-  const uid = useAppSelector((zoomApp) => zoomApp.auth.userInfo?.uid);
+  const uid = useAppSelector((state) => state.auth.userInfo?.uid);
   const navigate = useNavigate();
+  const dispatch = useDispatch();
 
   const [meetingName, setMeetingName] = useState("");
   const [selectedUser, setSelectedUser] = useState<Array<UserType>>([]);
@@ -79,12 +81,11 @@ export default function VideoConference() {
 
   const createMeeting = async () => {
     if (!validateForm()) {
-      const meetingId = generateMeetingID();
-      await addDoc(meetingsRef, {
+      // Creating the meeting -> here remember that docId is the meedtingID
+      // also I have to create the offer
+      const newMeetDoc = await addDoc(meetingsRef, {
         createdBy: uid,
-        meetingId,
         meetingName,
-        meetingType: anyoneCanJoin ? "anyone-can-join" : "video-conference",
         invitedUsers: anyoneCanJoin
           ? []
           : selectedUser.map((user: UserType) => user.uid),
@@ -92,13 +93,16 @@ export default function VideoConference() {
         maxUsers: anyoneCanJoin ? 100 : size,
         status: true,
       });
+      dispatch(setMeeting({
+        meetingId: newMeetDoc.id
+      }));
       createToast({
         title: anyoneCanJoin
           ? "Anyone can join meeting created successfully"
           : "Video Conference created successfully.",
         type: "success",
       });
-      navigate("/");
+      navigate(`/join/${newMeetDoc.id}`);
     }
   };
 

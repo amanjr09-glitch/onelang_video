@@ -18,6 +18,7 @@ import Meeting from "./pages/Meeting";
 import MyMeetings from "./pages/MyMeetings";
 import OneOnOneMeeting from "./pages/OneOnOneMeeting";
 import VideoConference from "./pages/VideoConference";
+import "./App.css"
 
 export default function App() {
   const dispatch = useDispatch();
@@ -67,7 +68,7 @@ export default function App() {
             <Route path="/create1on1" element={<OneOnOneMeeting />} />
             <Route path="/videoconference" element={<VideoConference />} />
             <Route path="/mymeetings" element={<MyMeetings />} />
-            <Route path="/join/:id" element={<JoinMeeting />} />
+            <Route path="/join/:meetId" element={<JoinMeeting />} />
             <Route path="/meetings" element={<Meeting />} />
             <Route path="/" element={<Dashboard />} />
             <Route path="*" element={<Login />} />
