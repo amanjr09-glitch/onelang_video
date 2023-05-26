@@ -6,6 +6,7 @@ import {
   EuiSwitch,
 } from "@elastic/eui";
 import { addDoc } from "firebase/firestore";
+import { push, ref, set } from "firebase/database";
 import moment from "moment";
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -20,7 +21,7 @@ import Header from "../components/Header";
 import useAuth from "../hooks/useAuth";
 import useFetchUsers from "../hooks/useFetchUsers";
 import useToast from "../hooks/useToast";
-import { meetingsRef } from "../utils/firebaseConfig";
+import { firebaseRTDB, meetingsRef } from "../utils/firebaseConfig";
 import { FieldErrorType, UserType } from "../utils/types";
 import { setMeeting } from "../app/slices/MeetingSlice";
 import { useDispatch } from "react-redux";
@@ -82,8 +83,7 @@ export default function VideoConference() {
   const createMeeting = async () => {
     if (!validateForm()) {
       // Creating the meeting -> here remember that docId is the meedtingID
-      // also I have to create the offer
-      const newMeetDoc = await addDoc(meetingsRef, {
+      const key = await push(ref(firebaseRTDB, "meetings"), {
         createdBy: uid,
         meetingName,
         invitedUsers: anyoneCanJoin
@@ -92,17 +92,18 @@ export default function VideoConference() {
         meetingDate: startDate.format("L"),
         maxUsers: anyoneCanJoin ? 100 : size,
         status: true,
-      });
+      }).key;
       dispatch(setMeeting({
-        meetingId: newMeetDoc.id
+        meetingId: key
       }));
       createToast({
         title: anyoneCanJoin
-          ? "Anyone can join meeting created successfully"
-          : "Video Conference created successfully.",
+          ? `Anyone can join meeting created successfully. /join/${key}`
+          : `Video Conference created successfully. /join/${key}`,
         type: "success",
       });
-      navigate(`/join/${newMeetDoc.id}`);
+      alert(key);
+      // navigate(`/join/${key}`);
     }
   };
 

@@ -7,6 +7,10 @@ export const store = configureStore({
     auth: authSlice.reducer,
     meetings: meetingsSlice.reducer,
   },
+  middleware: (getDefaultMiddleware) =>
+    getDefaultMiddleware({
+      serializableCheck: false,
+    })
 });
 
 export type RootState = ReturnType<typeof store.getState>;
