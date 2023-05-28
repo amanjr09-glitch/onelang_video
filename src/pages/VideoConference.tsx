@@ -6,7 +6,6 @@ import {
   EuiSwitch,
 } from "@elastic/eui";
 import { addDoc } from "firebase/firestore";
-import { push, ref, set } from "firebase/database";
 import moment from "moment";
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -21,18 +20,16 @@ import Header from "../components/Header";
 import useAuth from "../hooks/useAuth";
 import useFetchUsers from "../hooks/useFetchUsers";
 import useToast from "../hooks/useToast";
-import { firebaseRTDB, meetingsRef } from "../utils/firebaseConfig";
+import { meetingsRef } from "../utils/firebaseConfig";
+import { generateMeetingID } from "../utils/generateMeetingId";
 import { FieldErrorType, UserType } from "../utils/types";
-import { setMeeting } from "../app/slices/MeetingSlice";
-import { useDispatch } from "react-redux";
 
 export default function VideoConference() {
   useAuth();
   const [users] = useFetchUsers();
   const [createToast] = useToast();
-  const uid = useAppSelector((state) => state.auth.userInfo?.uid);
+  const uid = useAppSelector((zoomApp) => zoomApp.auth.userInfo?.uid);
   const navigate = useNavigate();
-  const dispatch = useDispatch();
 
   const [meetingName, setMeetingName] = useState("");
   const [selectedUser, setSelectedUser] = useState<Array<UserType>>([]);
@@ -82,28 +79,26 @@ export default function VideoConference() {
 
   const createMeeting = async () => {
     if (!validateForm()) {
-      // Creating the meeting -> here remember that docId is the meedtingID
-      const key = await push(ref(firebaseRTDB, "meetings"), {
+      const meetingId = generateMeetingID();
+      await addDoc(meetingsRef, {
         createdBy: uid,
+        meetingId,
         meetingName,
+        meetingType: anyoneCanJoin ? "anyone-can-join" : "video-conference",
         invitedUsers: anyoneCanJoin
           ? []
           : selectedUser.map((user: UserType) => user.uid),
         meetingDate: startDate.format("L"),
         maxUsers: anyoneCanJoin ? 100 : size,
         status: true,
-      }).key;
-      dispatch(setMeeting({
-        meetingId: key
-      }));
+      });
       createToast({
         title: anyoneCanJoin
-          ? `Anyone can join meeting created successfully. /join/${key}`
-          : `Video Conference created successfully. /join/${key}`,
+          ? "Anyone can join meeting created successfully"
+          : "Video Conference created successfully.",
         type: "success",
       });
-      alert(key);
-      // navigate(`/join/${key}`);
+      navigate("/");
     }
   };
 

@@ -123,17 +123,6 @@ export default function Header() {
   const responsiveSection = [
     {
       items: [
-        <Link to="/">
-          <EuiText>
-            <h2 style={{ padding: "0 1vw" }}>
-              <EuiTextColor color="#0b5cff">Zoom</EuiTextColor>
-            </h2>
-          </EuiText>
-        </Link>,
-      ],
-    },
-    {
-      items: [
         <EuiFlexGroup
           justifyContent="center"
           alignItems="center"

@@ -1,221 +1,136 @@
+import { ZegoUIKitPrebuilt } from "@zegocloud/zego-uikit-prebuilt";
 import { onAuthStateChanged } from "firebase/auth";
-import { useContext, useEffect, useState } from "react";
+import { getDocs, query, where } from "firebase/firestore";
+import moment from "moment";
+import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import useToast from "../hooks/useToast";
-import { firebaseAuth, firebaseRTDB, connectedRef } from "../utils/firebaseConfig";
-import "./index.css"
-import { useAppDispatch, useAppSelector } from "../app/hooks";
-import { setMeeting } from "../app/slices/MeetingSlice";
-import { setUser } from "../app/slices/AuthSlice";
-import { child, get, onChildAdded, onChildRemoved, onDisconnect, onValue, push, ref } from "firebase/database";
-import MeetScreenWrap from "./MeetScreenWrap";
-import { StreamContext } from "./StreamContext";
-import { createAnswer } from "../utils/peerConnection";
+import { firebaseAuth, meetingsRef } from "../utils/firebaseConfig";
+import { generateMeetingID } from "../utils/generateMeetingId";
 
 export default function JoinMeeting() {
-  const { meetId } = useParams();
+  const params = useParams();
   const navigate = useNavigate();
-  const dispatch = useAppDispatch();
-  const { meetingData } = useAppSelector((state) => state.meetings);
-  const { userInfo } = useAppSelector((state) => state.auth);
   const [createToast] = useToast();
+  const [isAllowed, setIsAllowed] = useState(false);
+  const [user, setUser] = useState<any>(undefined);
+  const [userLoaded, setUserLoaded] = useState(false);
 
-  const {
-    currentUser,
-    participants,
-    localStream,
-    setCurrentUserHandler,
-    setLocalStreamHandler,
-    addParticipant,
-    removePartcipant
-  } = useContext(StreamContext);
-
-  const [isLoading, setIsLoading] = useState(false);
-
-
-
+  onAuthStateChanged(firebaseAuth, (currentUser) => {
+    if (currentUser) {
+      setUser(currentUser);
+    }
+    setUserLoaded(true);
+  });
   useEffect(() => {
-    // Check user exists or not
-    if (!userInfo?.uid && !isLoading) {
-      setIsLoading(true);
-      // Fetch it
-      onAuthStateChanged(firebaseAuth, (user) => {
-        if (user) {
-          // Set it to the current User
-          dispatch(setUser({
-            uid: user.uid,
-            email: user.email || "",
-            name: user.displayName || ""
-          }))
-          if (meetId) {
-            get(child(ref(firebaseRTDB), `meetings/${meetId}`)).then((snap) => {
-              if (snap.exists()) {
-                const meetingVal = snap.val();
-                dispatch(setMeeting({
-                  ...meetingVal,
-                  meetId
-                }));
-                const isCreator = meetingVal.createdBy === user.uid;
-                const index = meetingVal.invitedUsers?.findIndex(
-                  (invitedUser: string) => invitedUser === user.uid
-                );
-                // allowed in the invited or it is creator or anyone can join
-                if (index !== -1 || isCreator || !meetingVal.invitedUsers.length) {
-                  // Ask for media strream permissions
-                  navigator.mediaDevices.getUserMedia({
-                    audio: true,
-                    video: true
-                  }).then((stream) => {
-                    stream.getVideoTracks()[0].enabled = false;
-                    setLocalStreamHandler(stream);
-                    // This will check for client connection
-                    onValue(connectedRef, (snap) => {
-                      console.log(snap.val());
-                      const preferences = {
-                        audio: true,
-                        video: false,
-                        screen: false
-                      }
-                      // Push the participants
-                      push(ref(firebaseRTDB, `meetings/${meetId}/participants`), {
-                        uid: user.uid,
-                        preferences,
-                        fullName: user.displayName
-                      }).then((val) => {
-                        // Here user is connected successfully so we need to set current User
-                        (setCurrentUserHandler({
-                          currentUser: {
-                            [val.key || ""]: {
-                              uid: user.uid,
-                              preferences,
-                              fullName: user.displayName
-                            }
-                          },
-                          meetId
-                        }))
-                        // Listeners for partcipant added or removed
-                        const participantRef = ref(firebaseRTDB, `meetings/${meetId}/participants`);
-                        // another event listener that to add the user
-                        onChildAdded(participantRef, (snap) => {
-                          const { preferences, uid } = snap.val();
-                          (addParticipant({
-                            newPartcipant: {
-                              [snap.key || ""]: {
-                                uid,
-                                preferences,
-                                fullName: user.displayName
-                              }
-                            },
-                            localStream: stream,
-                            currentUser: {
-                              [val.key || ""]: {
-                                uid: user.uid,
-                                preferences,
-                                fullName: user.displayName
-                              }
-                            },
-                            meetId
-                          }))
-                        });
-                        // another event listenet to remove the user
-                        onChildRemoved(participantRef, (snap) => {
-                          // remove it from the backup
-                          (removePartcipant(snap.key || ""));
-                        })
-                        onDisconnect(ref(firebaseRTDB, `meetings/${meetId}/participants/${val.key}`)).remove();
-                      })
-                    });
-                  })
-                }
-              } else {
+    const getMeetingData = async () => {
+      if (params.id && userLoaded) {
+        const firestoreQuery = query(
+          meetingsRef,
+          where("meetingId", "==", params.id)
+        );
+        const fetchedMeetings = await getDocs(firestoreQuery);
+
+        if (fetchedMeetings.docs.length) {
+          const meeting = fetchedMeetings.docs[0].data();
+          const isCreator = meeting.createdBy === user?.uid;
+          if (meeting.meetingType === "1-on-1") {
+            if (meeting.invitedUsers[0] === user?.uid || isCreator) {
+              if (meeting.meetingDate === moment().format("L")) {
+                setIsAllowed(true);
+              } else if (
+                moment(meeting.meetingDate).isBefore(moment().format("L"))
+              ) {
+                createToast({ title: "Meeting has ended.", type: "danger" });
+                navigate(user ? "/" : "/login");
+              } else if (moment(meeting.meetingDate).isAfter()) {
                 createToast({
-                  title: `You are not invited to the meeting.`,
-                  type: "danger",
+                  title: `Meeting is on ${meeting.meetingDate}`,
+                  type: "warning",
                 });
                 navigate(user ? "/" : "/login");
               }
-              setIsLoading(false);
-            }).catch(err => {
-              console.log(err);
-              setIsLoading(false);
-            })
+            } else navigate(user ? "/" : "/login");
+          } else if (meeting.meetingType === "video-conference") {
+            const index = meeting.invitedUsers.findIndex(
+              (invitedUser: string) => invitedUser === user?.uid
+            );
+            if (index !== -1 || isCreator) {
+              if (meeting.meetingDate === moment().format("L")) {
+                setIsAllowed(true);
+              } else if (
+                moment(meeting.meetingDate).isBefore(moment().format("L"))
+              ) {
+                createToast({ title: "Meeting has ended.", type: "danger" });
+                navigate(user ? "/" : "/login");
+              } else if (moment(meeting.meetingDate).isAfter()) {
+                createToast({
+                  title: `Meeting is on ${meeting.meetingDate}`,
+                  type: "warning",
+                });
+              }
+            } else {
+              createToast({
+                title: `You are not invited to the meeting.`,
+                type: "danger",
+              });
+              navigate(user ? "/" : "/login");
+            }
+          } else {
+            setIsAllowed(true);
           }
-        } else {
-          navigate("/login");
         }
-      });
-    }
-  }, [createToast, meetId, dispatch, navigate, userInfo, isLoading])
-
-  useEffect(() => {
-    const initailizeListeners = (recieverId: string) => {
-      const offerRef = ref(firebaseRTDB, `meetings/${meetId}/participants/${recieverId}/offers`);
-      const offerCandidatesRef = ref(firebaseRTDB, `meetings/${meetId}/participants/${recieverId}/offerCandidates`);
-      const answerRef = ref(firebaseRTDB, `meetings/${meetId}/participants/${recieverId}/answer`);
-      const answerCandidatesRef = ref(firebaseRTDB, `meetings/${meetId}/participants/${recieverId}/answerCandidates`);
-      onChildAdded(offerRef, async (snap) => {
-        const data = snap.val();
-        if (data?.offerPayload) {
-          const createdId = data?.offerPayload.userId;
-          /* @ts-ignore */
-          console.log(participants[createdId]);
-          /* @ts-ignore */
-          const peerConnection = participants[createdId].peerConnection;
-          await peerConnection.setRemoteDescription(new RTCSessionDescription(data?.offerPayload))
-          createAnswer(peerConnection, recieverId, createdId, meetId);
-        }
-      })
-      onChildAdded(offerCandidatesRef, async (snap) => {
-        const data = snap.val();
-        if (data?.userId) {
-          /* @ts-ignore */
-          const peerConnection = participants[data?.userId].peerConnection;
-          peerConnection.addIceCandidate(new RTCIceCandidate(data));
-        }
-      })
-      onChildAdded(answerRef, async (snap) => {
-        const data = snap.val();
-        if (data?.answerPayload) {
-          const createdId = data?.answerPayload.userId;
-          /* @ts-ignore */
-          const peerConnection = participants[createdId].peerConnection;
-          await peerConnection.setRemoteDescription(new RTCSessionDescription(data?.answerPayload))
-        }
-      })
-      onChildAdded(answerCandidatesRef, async (snap) => {
-        const data = snap.val();
-        if (data?.userId) {
-          /* @ts-ignore */
-          if (!Boolean(participants[data?.userId])) return;
-          /* @ts-ignore */
-          const peerConnection = participants[data?.userId].peerConnection;
-          console.log(data);
-          peerConnection.addIceCandidate(new RTCIceCandidate(data));
-        }
-      })
-    }
-    if (userInfo?.uid && currentUser && Object.keys(participants).length) {
-      initailizeListeners(Object.keys(currentUser || {})[0] || "");
+      }
     };
-  }, [participants, currentUser, userInfo, meetId])
+    getMeetingData();
+  }, [userLoaded]);
+  const appId = 193788827;
+  const serverSecret = "98f009d944eb38dc3b3f5f7c68614c41";
+  const myMeeting = async (element: any) => {
+    const kitToken = ZegoUIKitPrebuilt.generateKitTokenForTest(
+      appId,
+      serverSecret,
+      params.id as string,
+      user.uid ? user.uid : generateMeetingID(),
+      user.displayName ? user.displayName : generateMeetingID()
+    );
+    const zp = ZegoUIKitPrebuilt.create(kitToken);
 
-  return !isLoading ? (
+   
+    zp?.joinRoom({
+      container: element,
+      maxUsers: 50,
+      sharedLinks: [
+        {
+          name: "Personal link",
+          url: window.location.origin,
+        },
+      ],
+      scenario: {
+        mode: ZegoUIKitPrebuilt.VideoConference,
+      },
+      showTurnOffRemoteCameraButton: true,
+      showTurnOffRemoteMicrophoneButton: true,
+      showRemoveUserButton: true,
+    });
+  };
+
+
+  return isAllowed ? (
     <div
-      className="root"
       style={{
         display: "flex",
-        minHeight: "100vh",
+        height: "100vh",
         flexDirection: "column",
-        width: "100vw"
       }}
     >
-      <h1>{meetingData.meetingName}</h1>
-      <MeetScreenWrap />
-      {/* <div className="lobby-container">
-        <div className="lobby-item">
-          <video id="localStreamVideo" autoPlay playsInline muted></video>
-        </div>
-      </div> */}
+      <div
+        className="myCallContainer"
+        ref={myMeeting}
+        style={{ width: "100%", height: "100vh" }}
+      ></div>
     </div>
-  ) : <h1>Joining....</h1>
+  ) : (
+    <></>
+  );
 }

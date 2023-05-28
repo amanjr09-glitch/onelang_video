@@ -9,8 +9,8 @@ import {
   EuiText,
   EuiTextColor,
 } from "@elastic/eui";
+import logo from "../assets/logo.png";
 import animation from "../assets/animation.gif";
-// import './login.css'
 
 import React from "react";
 import {
@@ -55,13 +55,12 @@ function Login() {
   return (
     <EuiProvider colorMode="dark">
       <EuiFlexGroup
-      className="container-outer"
         justifyContent="center"
         alignItems="center"
         style={{ width: "100vw", height: "100vh" }}
       >
-        <EuiFlexItem  grow={false}>
-          <EuiPanel className="container" paddingSize="xl" >
+        <EuiFlexItem grow={false}>
+          <EuiPanel paddingSize="xl">
             <EuiFlexGroup justifyContent="center" alignItems="center">
               <EuiFlexItem>
                 <EuiImage src={animation} alt="logo" />
@@ -69,12 +68,13 @@ function Login() {
               <EuiFlexItem>
                 <EuiSpacer size="xs" />
                 <EuiText textAlign="center" grow={false}>
-                  <h3>   
-                    <EuiTextColor> One Platform to connect</EuiTextColor>
+                  <h3>
+                    <EuiTextColor>One Platform to</EuiTextColor>
+                    <EuiTextColor color="#0b5cff"> connect</EuiTextColor>
                   </h3>
                 </EuiText>
                 <EuiSpacer size="l" />
-                <EuiButton  fill onClick={login}>
+                <EuiButton fill onClick={login}>
                   Login with Google
                 </EuiButton>
               </EuiFlexItem>
