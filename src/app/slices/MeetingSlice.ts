@@ -19,34 +19,6 @@ const initialState: meetingInitialState = {
   localStream: null
 };
 
-// Global state
-const stuntServers = {
-  'iceServers':
-    [{ 'urls': 'stun:stun.l.google.com:19302' }]
-}
-
-const addConnection = (currentUser: any, newPartcipant: any, mediaStream: any, meetId: string) => {
-  const peerConnection = new RTCPeerConnection(stuntServers);
-  mediaStream.getTracks().forEach((track: any) => {
-    peerConnection.addTrack(track, mediaStream);
-  });
-
-  const currentUserKey = Object.keys(currentUser)[0];
-  const newPartcipantKey = Object.keys(newPartcipant)[0];
-
-  const sortIds = [currentUserKey, newPartcipantKey].sort((a, b) => a.localeCompare(b));
-
-  newPartcipant[newPartcipantKey].peerConnection = peerConnection
-
-  console.log(sortIds);
-  console.log([currentUserKey, newPartcipantKey]);
-
-  // if (sortIds[1] === newPartcipantKey) {
-  console.log("Creating offer");
-  createOffer(peerConnection, sortIds[0], sortIds[1], meetId)
-  // }
-}
-
 export const meetingsSlice = createSlice({
   name: "meetings",
   initialState,
@@ -62,21 +34,24 @@ export const meetingsSlice = createSlice({
       // initailizeListeners(state.meetingData.meetId, Object.keys(action.payload)[0])
     },
     addParticipant: (state, action) => {
+      const { newPartcipant, localStream, handleSetBackupPartcipant } = action.payload;
       const currentUserId = state.currentUser ? Object.keys(state.currentUser)[0] : "";
-      const newParticipantId = Object.keys(action.payload)[0];
+      const newParticipantId = Object.keys(newPartcipant)[0];
       if (currentUserId === newParticipantId) {
-        action.payload[newParticipantId].currentUser = true;
+        newPartcipant[newParticipantId].currentUser = true;
       }
 
       // Make connection with other users
-      if (state.localStream && !action.payload[newParticipantId].currentUser) {
+      if (localStream && !newPartcipant[newParticipantId].currentUser) {
         console.log("Creating connections!");
-        addConnection(state.currentUser, action.payload, state.localStream, state.meetingData.meetId)
+        // addConnection(state.currentUser, newPartcipant, localStream, state.meetingData.meetId, setBackupPartcipants)
       }
+
+      handleSetBackupPartcipant(newPartcipant)
 
       state.participants = {
         ...state.participants,
-        ...action.payload
+        ...newPartcipant
       }
     },
     removeParticipants: (state, action) => {

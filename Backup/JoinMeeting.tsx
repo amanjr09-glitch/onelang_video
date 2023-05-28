@@ -9,12 +9,6 @@ import { useAppDispatch, useAppSelector } from "../app/hooks";
 import { setMeeting } from "../app/slices/MeetingSlice";
 import { setUser } from "../app/slices/AuthSlice";
 
-// Global state
-const servers = {
-  'iceServers':
-    [{ 'urls': 'stun:stun.l.google.com:19302' }]
-}
-
 
 export default function JoinMeeting() {
   const { meetId } = useParams();
@@ -25,8 +19,6 @@ export default function JoinMeeting() {
   const [createToast] = useToast();
 
   const [localStream, setLocalStream] = useState<MediaStream>(new MediaStream());
-  const [remoteStreams, setRemoteStreams] = useState<{ [key: string]: any }>({});
-  const [peerConnection, setPeerConnection] = useState<RTCPeerConnection>(new RTCPeerConnection(servers));
 
   const [isLoading, setIsLoading] = useState(false);
 

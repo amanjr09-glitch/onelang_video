@@ -5,11 +5,14 @@ import App from "./App";
 import { Provider } from "react-redux";
 import { store } from "./app/store";
 import { BrowserRouter } from "react-router-dom";
+import StreamContextProvider from "./pages/StreamContext";
 
 ReactDOM.render(
   <Provider store={store}>
     <BrowserRouter>
-      <App />
+      <StreamContextProvider>
+        <App />
+      </StreamContextProvider>
     </BrowserRouter>
   </Provider>,
   document.getElementById("root")
